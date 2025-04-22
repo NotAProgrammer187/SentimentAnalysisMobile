@@ -18,12 +18,18 @@ const SentimentAnalytics = ({ posts }) => {
 
     const counts = posts.reduce(
       (acc, post) => {
-        const sentiment = post.sentiment.toLowerCase();
-        if (sentiment === 'positive') {
-          acc.positive += 1;
-        } else if (sentiment === 'negative') {
-          acc.negative += 1;
+        // Check if post and post.sentiment exist and are not null
+        if (post && post.sentiment) {
+          const sentiment = post.sentiment.toLowerCase();
+          if (sentiment === 'positive') {
+            acc.positive += 1;
+          } else if (sentiment === 'negative') {
+            acc.negative += 1;
+          } else {
+            acc.neutral += 1;
+          }
         } else {
+          // Handle posts with missing sentiment data
           acc.neutral += 1;
         }
         acc.total += 1;
