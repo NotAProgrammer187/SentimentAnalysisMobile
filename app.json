@@ -7,13 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "plugins": [
-      ["expo-build-properties", {
-        "android": {
-          "usesCleartextTraffic": true
-        }
-      }]
-    ],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
