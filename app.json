@@ -1,5 +1,6 @@
 {
   "expo": {
+    "sdkVersion": "52.0.0",
     "name": "mobile-app-for-thesis",
     "slug": "snack-302dcc0b-4b6d-4591-93e9-99fdf63ef878",
     "version": "1.0.0",
@@ -19,10 +20,30 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "NOTIFICATIONS"
+      ],
+      "package": "com.thesis.sentimentanalysis"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#ffffff"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "51770eb7-de79-41e1-b4d0-bec8e91c2c6d"
+      },
+      "supabaseUrl": "${process.env.EXPO_PUBLIC_SUPABASE_URL}",
+      "supabaseAnonKey": "${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}"
     }
   }
 }
