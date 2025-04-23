@@ -5,11 +5,15 @@
 ### Installation
 
 ```bash
+npm install --global eas-cli
+
 # Install dependencies
 npm install
 
 # Install additional required package
 npm install expo-constants
+
+npm install expo-notifications
 ```
 
 ### Environment Setup
