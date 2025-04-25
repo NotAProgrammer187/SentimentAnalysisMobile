@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import { useTheme } from "../context/ThemeContext"
-import { User, ChevronRight } from "lucide-react-native"
+import { User, ChevronRight, ThumbsUp, ThumbsDown } from "lucide-react-native"
 import { supabase } from "../utils/supabaseClient"
 import SentimentAnalytics from "../components/SentimentAnalytics"
 
@@ -19,7 +19,8 @@ const UserListScreen = () => {
 
   const fetchData = useCallback(async () => {
     try {
-      // Fetch all posts for overall analytics
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
       const { data: postsData, error: postsError } = await supabase
         .from("SentimentResult")
         .select("*")
@@ -31,16 +32,30 @@ const UserListScreen = () => {
 
       setAllPosts(postsData)
 
-      // Extract unique usernames with their post counts
       const userMap = postsData.reduce((acc, post) => {
-        if (!acc[post.username]) {
-          acc[post.username] = {
-            name: post.username,
-            postCount: 1,
+        const username = post.username
+        const sentiment = post.sentiment?.toLowerCase() || "neutral"
+        const isRecent = new Date(post.timestamp) >= new Date(twentyFourHoursAgo)
+
+        if (!acc[username]) {
+          acc[username] = {
+            name: username,
+            postCount: 0,
+            positiveCount: 0,
+            negativeCount: 0,
           }
-        } else {
-          acc[post.username].postCount += 1
         }
+
+        acc[username].postCount += 1
+
+        if (isRecent) {
+          if (sentiment === "positive") {
+            acc[username].positiveCount += 1
+          } else if (sentiment === "negative") {
+            acc[username].negativeCount += 1
+          }
+        }
+
         return acc
       }, {})
 
@@ -89,8 +104,15 @@ const UserListScreen = () => {
         </View>
         <View>
           <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
-          <Text style={[styles.postCount, { color: `${colors.text}80` }]}>
-            {item.postCount} {item.postCount === 1 ? "post" : "posts"}
+          <Text style={[styles.postCount, { color: `${colors.text}80` }]}> 
+            {item.postCount} {item.postCount === 1 ? "post" : "posts"} •
+            {item.positiveCount > 0 && (
+              <> <ThumbsUp size={14} color={colors.positive} /> {item.positiveCount}</>
+            )}
+            {item.negativeCount > 0 && (
+              <> <ThumbsDown size={14} color={colors.negative} /> {item.negativeCount}</>
+            )}
+            {(item.positiveCount > 0 || item.negativeCount > 0) && <Text style={{ color: `${colors.text}60` }}> in 24h</Text>}
           </Text>
         </View>
       </View>
@@ -101,14 +123,14 @@ const UserListScreen = () => {
   const renderHeader = () => {
     if (allPosts.length === 0 && !loading) {
       return (
-        <Text style={[styles.headerText, { color: colors.text }]}>Select a user to view their sentiment analysis</Text>
+        <Text style={[styles.headerText, { color: colors.text }]}>Select user</Text>
       )
     }
 
     return (
       <View style={styles.headerContainer}>
         <SentimentAnalytics posts={allPosts} title="Overall Sentiment Analytics" />
-        <Text style={[styles.headerText, { color: colors.text, marginTop: 16 }]}>Select a user to view their sentiment analysis</Text>
+        <Text style={[styles.headerText, { color: colors.text, marginTop: 16 }]}>Select user</Text>
       </View>
     )
   }
@@ -141,13 +163,12 @@ const UserListScreen = () => {
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            // Add this inside the View with the FlatList
-<TouchableOpacity
-  style={[styles.testButton, { backgroundColor: colors.primary }]}
-  onPress={testNotification}
->
-  <Text style={styles.testButtonText}>Test Notification</Text>
-</TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.testButton, { backgroundColor: colors.primary }]}
+              onPress={testNotification}
+            >
+              <Text style={styles.testButtonText}>Test Notification</Text>
+            </TouchableOpacity>
             <Text style={[styles.emptyText, { color: colors.text }]}>No users found</Text>
           </View>
         }
