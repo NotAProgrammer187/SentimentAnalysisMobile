@@ -6,7 +6,8 @@ import { ThumbsUp, ThumbsDown, Minus } from 'lucide-react-native';
 const SentimentAnalytics = ({ posts }) => {
   const { colors } = useTheme();
   const [timeFilter, setTimeFilter] = useState('today');
-  const [showAnalytics, setShowAnalytics] = useState(false); // NEW STATE
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
 
   const analytics = useMemo(() => {
     if (!posts || posts.length === 0) {
@@ -17,6 +18,7 @@ const SentimentAnalytics = ({ posts }) => {
     const filteredPosts = posts.filter(post => {
       if (!post.timestamp) return false;
       const postDate = new Date(post.timestamp);
+
       if (timeFilter === 'today') {
         const today = new Date();
         return (
@@ -29,10 +31,12 @@ const SentimentAnalytics = ({ posts }) => {
         weekAgo.setDate(weekAgo.getDate() - 7);
         return postDate >= weekAgo;
       } else if (timeFilter === 'month') {
-        const monthAgo = new Date();
-        monthAgo.setMonth(monthAgo.getMonth() - 1);
-        return postDate >= monthAgo;
+        return (
+          postDate.getMonth() === selectedMonth &&
+          postDate.getFullYear() === now.getFullYear()
+        );
       }
+
       return true;
     });
 
@@ -58,7 +62,7 @@ const SentimentAnalytics = ({ posts }) => {
       neutral: counts.total > 0 ? Math.round((counts.neutral / counts.total) * 100) : 0,
       total: counts.total,
     };
-  }, [posts, timeFilter]);
+  }, [posts, timeFilter, selectedMonth]);
 
   return (
     <View>
@@ -100,6 +104,35 @@ const SentimentAnalytics = ({ posts }) => {
             </TouchableOpacity>
           </View>
 
+          {timeFilter === 'month' && (
+            <View style={{ marginTop: 10 }}>
+              <Text style={{ color: colors.text, marginBottom: 4, textAlign: 'center' }}>Select Month:</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
+                {[
+                  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+                ].map((monthName, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={{
+                      padding: 6,
+                      margin: 4,
+                      borderRadius: 6,
+                      backgroundColor: selectedMonth === index ? '#3b82f6' : colors.card,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}
+                    onPress={() => setSelectedMonth(index)}
+                  >
+                    <Text style={{ color: selectedMonth === index ? '#fff' : colors.text, fontSize: 12 }}>
+                      {monthName}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
           {analytics.total > 0 ? (
             <Text style={[styles.subtitle, { color: `${colors.text}80` }]}>
               Based on {analytics.total} posts
@@ -112,7 +145,6 @@ const SentimentAnalytics = ({ posts }) => {
 
           {analytics.total > 0 ? (
             <View style={styles.metricsContainer}>
-              {/* Positive */}
               <View style={styles.metricRow}>
                 <View style={styles.labelContainer}>
                   <ThumbsUp size={16} color={colors.positive} />
@@ -124,7 +156,6 @@ const SentimentAnalytics = ({ posts }) => {
                 <Text style={[styles.percentage, { color: colors.positive }]}>{analytics.positive}%</Text>
               </View>
 
-              {/* Negative */}
               <View style={styles.metricRow}>
                 <View style={styles.labelContainer}>
                   <ThumbsDown size={16} color={colors.negative} />
@@ -136,7 +167,6 @@ const SentimentAnalytics = ({ posts }) => {
                 <Text style={[styles.percentage, { color: colors.negative }]}>{analytics.negative}%</Text>
               </View>
 
-              {/* Neutral */}
               <View style={styles.metricRow}>
                 <View style={styles.labelContainer}>
                   <Minus size={16} color={colors.neutral} />
@@ -184,10 +214,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 3.84,
     elevation: 2,

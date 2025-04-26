@@ -25,15 +25,15 @@ const UserDetailScreen = () => {
   const { userName } = route.params;
   
   const [posts, setPosts] = useState([]);
+  const [filteredPosts, setFilteredPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [profileImage, setProfileImage] = useState(null);
+  const [filter, setFilter] = useState('All'); // All | Positive | Neutral | Negative
 
-  // Directory for storing user images
   const userImagesDir = FileSystem.documentDirectory + 'user_images/';
 
-  // Ensure the directory exists
   const setupImageDirectory = async () => {
     const dirInfo = await FileSystem.getInfoAsync(userImagesDir);
     if (!dirInfo.exists) {
@@ -41,7 +41,6 @@ const UserDetailScreen = () => {
     }
   };
 
-  // Load the user's profile image if it exists
   const loadProfileImage = async () => {
     try {
       await setupImageDirectory();
@@ -64,12 +63,11 @@ const UserDetailScreen = () => {
         .eq('username', userName)
         .order('timestamp', { ascending: false });
       
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       
       setPosts(data);
       setError(null);
+      setFilter('All'); // Reset filter on refresh
     } catch (error) {
       console.error('Error fetching user posts:', error);
       setError('Failed to load posts. Please try again later.');
@@ -84,24 +82,28 @@ const UserDetailScreen = () => {
     loadProfileImage();
   }, [fetchUserPosts]);
 
+  useEffect(() => {
+    if (filter === 'All') {
+      setFilteredPosts(posts);
+    } else {
+      setFilteredPosts(posts.filter(post => post.sentiment === filter));
+    }
+  }, [filter, posts]);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchUserPosts();
     await loadProfileImage();
   };
 
-  // Function to pick an image from the gallery
   const pickImage = async () => {
     try {
-      // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
       if (status !== 'granted') {
         Alert.alert('Permission Required', 'Please grant camera roll permissions to upload an image.');
         return;
       }
 
-      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -109,7 +111,7 @@ const UserDetailScreen = () => {
         quality: 0.7,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
+      if (!result.canceled && result.assets.length > 0) {
         const selectedImage = result.assets[0];
         await saveImage(selectedImage.uri);
       }
@@ -119,25 +121,21 @@ const UserDetailScreen = () => {
     }
   };
 
-  // Function to take a photo with the camera
   const takePhoto = async () => {
     try {
-      // Request permission
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      
       if (status !== 'granted') {
         Alert.alert('Permission Required', 'Please grant camera permissions to take a photo.');
         return;
       }
 
-      // Launch camera
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.7,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
+      if (!result.canceled && result.assets.length > 0) {
         const selectedImage = result.assets[0];
         await saveImage(selectedImage.uri);
       }
@@ -147,7 +145,6 @@ const UserDetailScreen = () => {
     }
   };
 
-  // Function to save the image to local storage
   const saveImage = async (imageUri) => {
     try {
       await setupImageDirectory();
@@ -189,9 +186,31 @@ const UserDetailScreen = () => {
       <View style={styles.headerContainer}>
         {renderProfileSection()}
         <SentimentAnalytics posts={posts} />
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Post History
-        </Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Post History</Text>
+
+        {/* Filter Buttons */}
+        <View style={styles.filterButtonsContainer}>
+          {['All', 'Positive', 'Neutral', 'Negative'].map((type) => (
+            <TouchableOpacity 
+              key={type}
+              style={[
+                styles.filterButton, 
+                { 
+                  backgroundColor: filter === type ? colors.primary : `${colors.primary}20`,
+                  borderColor: colors.primary
+                }
+              ]}
+              onPress={() => setFilter(type)}
+            >
+              <Text style={{
+                color: filter === type ? '#fff' : colors.primary,
+                fontWeight: '600'
+              }}>
+                {type}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
     );
   };
@@ -257,7 +276,7 @@ const UserDetailScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
-        data={posts}
+        data={filteredPosts}
         renderItem={renderItem}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listContainer}
@@ -366,6 +385,20 @@ const styles = StyleSheet.create({
   imageButtonText: {
     color: '#fff',
     fontWeight: '500',
+  },
+  filterButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    marginVertical: 8,
+    paddingHorizontal: 10,
+    gap: 8,
+  },
+  filterButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1.5,
   },
 });
 
