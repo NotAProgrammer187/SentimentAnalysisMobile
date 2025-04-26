@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from "react-native"
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Image } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import { useTheme } from "../context/ThemeContext"
 import { User, ChevronRight, ThumbsUp, ThumbsDown } from "lucide-react-native"
 import { supabase } from "../utils/supabaseClient"
 import SentimentAnalytics from "../components/SentimentAnalytics"
+import * as FileSystem from "expo-file-system"
 
 const UserListScreen = () => {
   const { colors } = useTheme()
@@ -16,10 +17,46 @@ const UserListScreen = () => {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
+  const [profileImages, setProfileImages] = useState({})
+
+  // Directory for storing user images
+  const userImagesDir = FileSystem.documentDirectory + 'user_images/'
+
+  // Check if the directory exists and create it if it doesn't
+  const setupImageDirectory = async () => {
+    const dirInfo = await FileSystem.getInfoAsync(userImagesDir)
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(userImagesDir, { intermediates: true })
+    }
+  }
+
+  // Load profile images for all users
+  const loadProfileImages = async (users) => {
+    try {
+      await setupImageDirectory()
+      
+      const imageMap = {}
+      
+      // Check for each user if they have a profile image
+      for (const user of users) {
+        const username = user.name
+        const imagePath = userImagesDir + `${username}.jpg`
+        const imageInfo = await FileSystem.getInfoAsync(imagePath)
+        
+        if (imageInfo.exists) {
+          imageMap[username] = `file://${imagePath}`
+        }
+      }
+      
+      setProfileImages(imageMap)
+    } catch (error) {
+      console.error("Error loading profile images:", error)
+    }
+  }
 
   const fetchData = useCallback(async () => {
     try {
-      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
       const { data: postsData, error: postsError } = await supabase
         .from("SentimentResult")
@@ -61,6 +98,10 @@ const UserListScreen = () => {
 
       const uniqueUsernames = Object.values(userMap)
       setUsernames(uniqueUsernames)
+      
+      // Load profile images for all users
+      await loadProfileImages(uniqueUsernames)
+      
       setError(null)
     } catch (error) {
       console.error("Error fetching data:", error)
@@ -81,13 +122,13 @@ const UserListScreen = () => {
   }
 
   const testNotification = () => {
-    const { sendTestNotification } = require('../utils/NotificationService');
+    const { sendTestNotification } = require('../utils/NotificationService')
     sendTestNotification(
       'Test Notification',
       'This is a test notification from your app',
       { type: 'TEST' }
-    );
-  };
+    )
+  }
 
   const navigateToUserDetail = (userName) => {
     navigation.navigate("UserDetail", { userName })
@@ -100,7 +141,14 @@ const UserListScreen = () => {
     >
       <View style={styles.userInfo}>
         <View style={[styles.avatarContainer, { backgroundColor: `${colors.primary}20` }]}>
-          <User size={24} color={colors.primary} />
+          {profileImages[item.name] ? (
+            <Image 
+              source={{ uri: profileImages[item.name] }} 
+              style={styles.avatarImage} 
+            />
+          ) : (
+            <User size={24} color={colors.primary} />
+          )}
         </View>
         <View>
           <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
@@ -226,6 +274,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
+    overflow: "hidden", // Ensure the image doesn't overflow the container
+  },
+  avatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   userName: {
     fontSize: 16,

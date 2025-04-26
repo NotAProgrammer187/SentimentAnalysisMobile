@@ -14,6 +14,10 @@ npm install
 npm install expo-constants
 
 npm install expo-notifications
+
+npx expo install expo-file-system
+
+npx expo install expo-image-picker expo-file-system
 ```
 
 ### Environment Setup
