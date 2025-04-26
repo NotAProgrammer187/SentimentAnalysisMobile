@@ -3,20 +3,37 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Alert } from 'react-native';
-import * as Notifications from 'expo-notifications'; //
+import { Alert, TouchableOpacity } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import { Ionicons } from '@expo/vector-icons';
 import UserListScreen from './screens/UserListScreen';
 import UserDetailScreen from './screens/UserDetailScreen';
-import { ThemeProvider } from './context/ThemeContext'; //
-import { initNotifications, subscribeToRealtimeChanges } from './utils/NotificationService'; //
+import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { initNotifications, subscribeToRealtimeChanges } from './utils/NotificationService';
 
 const Stack = createNativeStackNavigator();
 
-// Create a navigation reference for handling notifications (optional, but good practice if you want to navigate on tap)
+// Create a navigation reference for handling notifications
 const navigationRef = React.createRef();
 
-export default function App() {
-  // Create notification listener refs to prevent memory leaks
+// Theme toggle button component for the header
+function ThemeToggleButton() {
+  const { isDarkMode, toggleTheme } = useTheme();
+  
+  return (
+    <TouchableOpacity onPress={toggleTheme} style={{ marginRight: 10 }}>
+      <Ionicons 
+        name={isDarkMode ? 'sunny' : 'moon'} 
+        size={24} 
+        color={isDarkMode ? 'white' : 'black'} 
+      />
+    </TouchableOpacity>
+  );
+}
+
+// Main app component without theme context (will be wrapped later)
+function MainApp() {
+  const { isDarkMode, colors } = useTheme();
   const notificationListener = useRef();
   const responseListener = useRef();
 
@@ -25,24 +42,17 @@ export default function App() {
     const setupNotifications = async () => {
       try {
         // Request notification permissions and register token
-        const permissionGranted = await initNotifications(); //
+        const permissionGranted = await initNotifications();
 
         if (permissionGranted) {
           console.log('Notification permissions granted');
 
-          // Set up notification listeners for when the app is in foreground or notification is tapped
-          // These listeners are also set up in NotificationService.js, but you can keep
-          // these top-level ones in App.js for handling navigation or global app state
-          notificationListener.current = Notifications.addNotificationReceivedListener(notification => { //
+          notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
             console.log('Notification received in app:', notification);
-            // You can update UI or state here if needed
           });
 
-          responseListener.current = Notifications.addNotificationResponseReceivedListener(response => { //
+          responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
             console.log('Notification tapped:', response);
-            // This is where you would typically add logic to navigate
-            // using navigationRef.current.navigate(...) based on response.notification.request.content.data
-            // Example: navigationRef.current?.navigate('UserDetail', { userName: response.notification.request.content.data?.username });
           });
 
         } else {
@@ -54,22 +64,19 @@ export default function App() {
           );
         }
 
-        // Subscribe to Realtime updates for new data (INSERT events)
-        // Replace 'sentiment_data' with your actual table name you want to monitor
+        // Subscribe to Realtime updates for new data
         const subscription = subscribeToRealtimeChanges(
-          'SentimentResult', // <--- Make sure this is the correct table name you are inserting into
+          'SentimentResult',
           (newData) => {
             console.log('New data detected:', newData);
-            // --- START: Logic to trigger a local notification on new data ---
-            Notifications.scheduleNotificationAsync({ //
+            Notifications.scheduleNotificationAsync({
               content: {
-                title: 'New Data Added!', // Customize title
-                body: `New record detected! User: ${newData?.username || 'N/A'}`, // Customize body, safely access properties
-                data: { type: 'NEW_DATA', id: newData?.id, username: newData?.username }, // Optional data to pass with the notification
+                title: 'New Data Added!',
+                body: `New record detected! User: ${newData?.username || 'N/A'}`,
+                data: { type: 'NEW_DATA', id: newData?.id, username: newData?.username },
               },
-              trigger: null, // Use null to trigger the notification immediately
+              trigger: null,
             });
-            // --- END: Logic to trigger a local notification ---
           }
         );
 
@@ -80,10 +87,10 @@ export default function App() {
           }
 
           if (notificationListener.current) {
-            Notifications.removeNotificationSubscription(notificationListener.current); //
+            Notifications.removeNotificationSubscription(notificationListener.current);
           }
           if (responseListener.current) {
-            Notifications.removeNotificationSubscription(responseListener.current); //
+            Notifications.removeNotificationSubscription(responseListener.current);
           }
         };
       } catch (error) {
@@ -92,48 +99,59 @@ export default function App() {
     };
 
     setupNotifications();
-  }, []); // Empty dependency array means this effect runs once on mount
+  }, []);
 
   return (
+    <SafeAreaProvider>
+      <NavigationContainer ref={navigationRef}>
+        <Stack.Navigator>
+          <Stack.Screen
+            name="UserList"
+            component={UserListScreen}
+            options={{
+              title: 'Sentiment Monitoring',
+              headerStyle: {
+                backgroundColor: colors.card,
+              },
+              headerShadowVisible: false,
+              headerTitleStyle: {
+                fontWeight: 'bold',
+                color: colors.text,
+              },
+              headerTitleAlign: 'center',
+              // Add the theme toggle button to the header
+              headerRight: () => <ThemeToggleButton />,
+            }}
+          />
+          <Stack.Screen
+            name="UserDetail"
+            component={UserDetailScreen}
+            options={({ route }) => ({
+              title: route.params.userName,
+              headerStyle: {
+                backgroundColor: colors.card,
+              },
+              headerShadowVisible: false,
+              headerTitleStyle: {
+                fontWeight: 'bold',
+                color: colors.text,
+              },
+              // Add the theme toggle button to the detail screen header too
+              headerRight: () => <ThemeToggleButton />,
+            })}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+      <StatusBar style={isDarkMode ? "light" : "dark"} />
+    </SafeAreaProvider>
+  );
+}
+
+// Wrapper component that provides the theme context
+export default function App() {
+  return (
     <ThemeProvider>
-      <SafeAreaProvider>
-        {/* Pass navigationRef to the NavigationContainer */}
-        <NavigationContainer ref={navigationRef}>
-          <Stack.Navigator>
-            {/* Screen Definitions */}
-            <Stack.Screen
-              name="UserList" // or your main screen name
-              component={UserListScreen}
-              options={{
-                title: 'Sentiment Monitoring',
-                headerStyle: {
-                  backgroundColor: '#fff',
-                },
-                headerShadowVisible: false,
-                headerTitleStyle: {
-                  fontWeight: 'bold',
-                },
-              }}
-            />
-            <Stack.Screen
-              name="UserDetail" // or your detail screen name
-              component={UserDetailScreen}
-              options={({ route }) => ({
-                title: route.params.userName,
-                headerStyle: {
-                  backgroundColor: '#fff',
-                },
-                headerShadowVisible: false,
-                headerTitleStyle: {
-                  fontWeight: 'bold',
-                },
-              })}
-            />
-            {/* Add other screens here if you have them */}
-          </Stack.Navigator>
-        </NavigationContainer>
-        <StatusBar style="auto" />
-      </SafeAreaProvider>
+      <MainApp />
     </ThemeProvider>
   );
 }

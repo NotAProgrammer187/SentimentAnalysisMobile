@@ -10,7 +10,7 @@ export const ThemeProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(deviceTheme === "dark")
 
   const lightColors = {
-    background: "#f4f4f5",
+    background: "#fff",
     text: "#18181b",
     card: "#ffffff",
     border: "#e4e4e7",
@@ -21,7 +21,7 @@ export const ThemeProvider = ({ children }) => {
   }
 
   const darkColors = {
-    background: "#18181b",
+    background: "#282b30",
     text: "#f4f4f5",
     card: "#27272a",
     border: "#3f3f46",
@@ -29,6 +29,7 @@ export const ThemeProvider = ({ children }) => {
     positive: "#4ade80",
     negative: "#f87171",
     neutral: "#fbbf24",
+    overlay: "#ffffff1f",
   }
 
   const toggleTheme = () => {
