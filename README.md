@@ -18,6 +18,10 @@ npm install expo-notifications
 npx expo install expo-file-system
 
 npx expo install expo-image-picker expo-file-system
+
+npx expo install react-native-view-shot expo-media-library
+
+npx expo install expo-sharing
 ```
 
 ### Environment Setup
