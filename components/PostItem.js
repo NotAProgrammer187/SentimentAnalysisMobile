@@ -10,14 +10,25 @@ const PostItem = ({ item, isSelected, colors, handleLongPress, handlePostPress, 
       delayLongPress={300}
       activeOpacity={0.7}
     >
-      <View style={[styles.postContainer, isSelected && { backgroundColor: `${colors.primary}15` }]}>
+      <View style={[
+        styles.postContainer, 
+        isSelected && { 
+          backgroundColor: `${colors.primary}10`,
+          borderColor: colors.primary,
+          borderWidth: 1,
+        }
+      ]}>
         {selectionMode && (
           <View
             style={[
               styles.selectionIndicator,
               isSelected
-                ? { backgroundColor: colors.primary, borderColor: colors.primary }
-                : { borderColor: colors.border },
+                ? { backgroundColor: colors.primary }
+                : { 
+                    backgroundColor: colors.card, 
+                    borderColor: colors.border,
+                    borderWidth: 2,
+                  },
             ]}
           >
             {isSelected && <Check size={16} color="#fff" />}
@@ -36,9 +47,7 @@ const PostItem = ({ item, isSelected, colors, handleLongPress, handlePostPress, 
 
 const styles = StyleSheet.create({
   postContainer: {
-    marginHorizontal: 16,
-    marginBottom: 8,
-    borderRadius: 8,
+    borderRadius: 24,
     position: "relative",
     paddingLeft: 8,
   },
@@ -46,12 +55,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 8,
     top: "50%",
-    marginTop: -12,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    backgroundColor: "transparent",
+    marginTop: -14,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1,

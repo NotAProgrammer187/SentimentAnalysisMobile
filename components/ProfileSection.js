@@ -14,18 +14,28 @@ const ProfileSection = ({ userName, profileImage, colors, takePhoto, pickImage }
             </Text>
           </View>
         )}
+        <View style={[styles.profileImageOverlay, { backgroundColor: `${colors.primary}10` }]} />
       </View>
 
       <Text style={[styles.profileName, { color: colors.text }]}>{userName}</Text>
+      <Text style={[styles.profileSubtext, { color: `${colors.text}80` }]}>
+        User Profile
+      </Text>
 
       <View style={styles.imageButtonsContainer}>
-        <TouchableOpacity style={[styles.imageButton, { backgroundColor: colors.primary }]} onPress={takePhoto}>
-          <Camera size={18} color="#fff" />
+        <TouchableOpacity 
+          style={[styles.imageButton, { backgroundColor: colors.primary }]} 
+          onPress={takePhoto}
+        >
+          <Camera size={20} color="#fff" />
           <Text style={styles.imageButtonText}>Camera</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.imageButton, { backgroundColor: colors.primary }]} onPress={pickImage}>
-          <Upload size={18} color="#fff" />
+        <TouchableOpacity 
+          style={[styles.imageButton, { backgroundColor: colors.primary }]} 
+          onPress={pickImage}
+        >
+          <Upload size={20} color="#fff" />
           <Text style={styles.imageButtonText}>Gallery</Text>
         </TouchableOpacity>
       </View>
@@ -36,48 +46,76 @@ const ProfileSection = ({ userName, profileImage, colors, takePhoto, pickImage }
 const styles = StyleSheet.create({
   profileSection: {
     alignItems: "center",
-    padding: 16,
+    padding: 24,
+    paddingTop: 32,
   },
   profileImageContainer: {
-    marginBottom: 12,
+    marginBottom: 16,
+    position: 'relative',
   },
   profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
+    borderColor: 'white',
   },
   profileImagePlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 3,
+    borderColor: 'white',
+  },
+  profileImageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 40,
+    borderBottomLeftRadius: 60,
+    borderBottomRightRadius: 60,
   },
   profileImagePlaceholderText: {
-    fontSize: 36,
+    fontSize: 42,
     fontWeight: "bold",
   },
   profileName: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 16,
+    fontSize: 24,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  profileSubtext: {
+    fontSize: 16,
+    marginBottom: 24,
   },
   imageButtonsContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 12,
+    gap: 16,
   },
   imageButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   imageButtonText: {
     color: "#fff",
-    fontWeight: "500",
+    fontWeight: "600",
+    fontSize: 15,
   },
 })
 

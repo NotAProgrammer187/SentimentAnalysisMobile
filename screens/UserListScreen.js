@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Image } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import { useTheme } from "../context/ThemeContext"
-import { User, ChevronRight, ThumbsUp, ThumbsDown } from "lucide-react-native"
+import { User, ChevronRight, MessageCircle, AlertTriangle } from "lucide-react-native"
 import { supabase } from "../utils/supabaseClient"
 import SentimentAnalytics from "../components/SentimentAnalytics"
 import * as FileSystem from "expo-file-system"
@@ -80,6 +80,7 @@ const UserListScreen = () => {
             postCount: 0,
             positiveCount: 0,
             negativeCount: 0,
+            recentSentiment: null,
           }
         }
 
@@ -88,8 +89,12 @@ const UserListScreen = () => {
         if (isRecent) {
           if (sentiment === "positive") {
             acc[username].positiveCount += 1
+            if (!acc[username].recentSentiment) acc[username].recentSentiment = 'positive'
           } else if (sentiment === "negative") {
             acc[username].negativeCount += 1
+            if (!acc[username].recentSentiment) acc[username].recentSentiment = 'negative'
+          } else {
+            if (!acc[username].recentSentiment) acc[username].recentSentiment = 'neutral'
           }
         }
 
@@ -121,64 +126,76 @@ const UserListScreen = () => {
     await fetchData()
   }
 
-  const testNotification = () => {
-    const { sendTestNotification } = require('../utils/NotificationService')
-    sendTestNotification(
-      'Test Notification',
-      'This is a test notification from your app',
-      { type: 'TEST' }
-    )
-  }
-
   const navigateToUserDetail = (userName) => {
     navigation.navigate("UserDetail", { userName })
   }
 
+  const getSentimentColor = (sentiment) => {
+    switch (sentiment) {
+      case 'positive':
+        return colors.positive;
+      case 'negative':
+        return colors.negative;
+      default:
+        return colors.neutral;
+    }
+  };
+
   const renderItem = ({ item }) => (
     <TouchableOpacity
-      style={[styles.userCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+      style={[styles.userCard, { backgroundColor: colors.card }]}
       onPress={() => navigateToUserDetail(item.name)}
     >
       <View style={styles.userInfo}>
-        <View style={[styles.avatarContainer, { backgroundColor: `${colors.primary}20` }]}>
+        <View style={[styles.avatarContainer, { backgroundColor: colors.background }]}>
           {profileImages[item.name] ? (
             <Image 
               source={{ uri: profileImages[item.name] }} 
               style={styles.avatarImage} 
             />
           ) : (
-            <User size={24} color={colors.primary} />
+            <Text style={[styles.avatarText, { color: colors.subtext }]}>
+              {item.name.charAt(0).toUpperCase()}
+            </Text>
           )}
         </View>
-        <View>
+        <View style={styles.textContainer}>
           <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
-          <Text style={[styles.postCount, { color: `${colors.text}80` }]}> 
-            {item.postCount} {item.postCount === 1 ? "post" : "posts"} •
-            {item.positiveCount > 0 && (
-              <> <ThumbsUp size={14} color={colors.positive} /> {item.positiveCount}</>
-            )}
+          <View style={styles.statsContainer}>
+            <MessageCircle size={14} color={colors.subtext} />
+            <Text style={[styles.postCount, { color: colors.subtext }]}> 
+              {item.postCount} {item.postCount === 1 ? "post" : "posts"}
+            </Text>
             {item.negativeCount > 0 && (
-              <> <ThumbsDown size={14} color={colors.negative} /> {item.negativeCount}</>
+              <View style={[styles.warningBadge, { backgroundColor: colors.negative }]}>
+                <AlertTriangle size={12} color="#FFF" />
+                <Text style={styles.warningBadgeText}>
+                  {item.negativeCount} negative {item.negativeCount === 1 ? 'post' : 'posts'} in 24h
+                </Text>
+              </View>
             )}
-            {(item.positiveCount > 0 || item.negativeCount > 0) && <Text style={{ color: `${colors.text}60` }}> in 24h</Text>}
-          </Text>
+          </View>
         </View>
       </View>
-      <ChevronRight size={20} color={`${colors.text}60`} />
+      <View style={styles.rightSection}>
+        {item.recentSentiment && (
+          <View style={[styles.sentimentIndicator, { backgroundColor: getSentimentColor(item.recentSentiment) }]} />
+        )}
+        <ChevronRight size={20} color={colors.subtext} />
+      </View>
     </TouchableOpacity>
   )
 
   const renderHeader = () => {
-    if (allPosts.length === 0 && !loading) {
-      return (
-        <Text style={[styles.headerText, { color: colors.text }]}>Select user</Text>
-      )
-    }
-
     return (
       <View style={styles.headerContainer}>
-        <SentimentAnalytics posts={allPosts} title="Overall Sentiment Analytics" />
-        <Text style={[styles.headerText, { color: colors.text, marginTop: 16 }]}>Select user</Text>
+        <SentimentAnalytics posts={allPosts} />
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>User</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.subtext }]}>
+            {usernames.length} active user
+          </Text>
+        </View>
       </View>
     )
   }
@@ -207,17 +224,23 @@ const UserListScreen = () => {
         renderItem={renderItem}
         keyExtractor={(item) => item.name}
         contentContainerStyle={styles.listContainer}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor={colors.primary}
+          />
+        }
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <TouchableOpacity
-              style={[styles.testButton, { backgroundColor: colors.primary }]}
-              onPress={testNotification}
-            >
-              <Text style={styles.testButtonText}>Test Notification</Text>
-            </TouchableOpacity>
-            <Text style={[styles.emptyText, { color: colors.text }]}>No users found</Text>
+            <View style={[styles.emptyIcon, { backgroundColor: colors.card }]}>
+              <User size={32} color={colors.subtext} />
+            </View>
+            <Text style={[styles.emptyText, { color: colors.text }]}>No customers found</Text>
+            <Text style={[styles.emptySubtext, { color: colors.subtext }]}>
+              Pull down to refresh
+            </Text>
           </View>
         }
       />
@@ -241,53 +264,98 @@ const styles = StyleSheet.create({
   headerContainer: {
     marginBottom: 8,
   },
-  headerText: {
-    fontSize: 16,
+  sectionHeader: {
+    marginTop: 24,
     marginBottom: 16,
-    textAlign: "center",
+    paddingHorizontal: 8,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 15,
   },
   userCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 12,
-    borderWidth: 1,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 4,
     },
-    shadowOpacity: 0.05,
-    shadowRadius: 2.22,
-    elevation: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   userInfo: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
   },
   avatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
-    overflow: "hidden", // Ensure the image doesn't overflow the container
+    marginRight: 16,
+    overflow: "hidden",
   },
   avatarImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+  },
+  avatarText: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  textContainer: {
+    flex: 1,
   },
   userName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
     marginBottom: 4,
   },
+  statsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   postCount: {
     fontSize: 14,
+    marginLeft: 6,
+  },
+  warningBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  warningBadgeText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  sentimentIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   loadingText: {
     marginTop: 10,
@@ -298,24 +366,24 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   emptyContainer: {
-    padding: 20,
+    padding: 32,
     alignItems: "center",
   },
-  emptyText: {
-    fontSize: 16,
-  },
-  testButton: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
     justifyContent: 'center',
-    marginHorizontal: 16,
-    marginTop: 16,
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  testButtonText: {
-    color: 'white',
+  emptyText: {
+    fontSize: 18,
     fontWeight: '600',
-    fontSize: 16,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 15,
   },
 })
 

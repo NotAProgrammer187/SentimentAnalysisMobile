@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { ThumbsUp, ThumbsDown, Minus } from 'lucide-react-native';
+import { MessageCircle } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
 
 const SentimentPost = ({ user, content, sentiment, timestamp }) => {
@@ -17,15 +17,16 @@ const SentimentPost = ({ user, content, sentiment, timestamp }) => {
     }
   };
 
-  const getSentimentIcon = () => {
-    switch (sentiment.toLowerCase()) {
-      case 'positive':
-        return <ThumbsUp size={20} color={getSentimentColor()} />;
-      case 'negative':
-        return <ThumbsDown size={20} color={getSentimentColor()} />;
-      default:
-        return <Minus size={20} color={getSentimentColor()} />;
-    }
+  const getSentimentBadge = () => {
+    const color = getSentimentColor();
+    return (
+      <View style={[styles.sentimentBadge, { backgroundColor: `${color}15` }]}>
+        <View style={[styles.sentimentDot, { backgroundColor: color }]} />
+        <Text style={[styles.sentimentText, { color: color }]}>
+          {sentiment.charAt(0).toUpperCase() + sentiment.slice(1)}
+        </Text>
+      </View>
+    );
   };
 
   const formatTimestamp = (timestamp) => {
@@ -40,89 +41,113 @@ const SentimentPost = ({ user, content, sentiment, timestamp }) => {
       });
     } catch (error) {
       console.error('Error formatting timestamp:', error);
-      return timestamp; // Return the original timestamp if parsing fails
+      return timestamp;
     }
   };
 
   return (
-    <View 
-      style={[
-        styles.container, 
-        { 
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderLeftColor: getSentimentColor(),
-          borderLeftWidth: 4,
-        }
-      ]}
-    >
+    <View style={[styles.container, { backgroundColor: colors.card }]}>
       <View style={styles.header}>
-        <Text style={[styles.username, { color: colors.text }]}>{user}</Text>
-        <Text style={[styles.timestamp, { color: `${colors.text}80` }]}> • {formatTimestamp(timestamp)}</Text>
-      </View>
-      
-      <View style={styles.sentimentRow}>
-        <View style={[styles.sentimentContainer, { backgroundColor: `${getSentimentColor()}15` }]}>
-          {getSentimentIcon()}
-          <Text style={[styles.sentiment, { color: getSentimentColor(), fontSize: 16 }]}>
-            {sentiment}
-          </Text>
+        <View style={styles.userInfo}>
+          <View style={[styles.avatar, { backgroundColor: colors.background }]}>
+            <Text style={[styles.avatarText, { color: colors.subtext }]}>
+              {user.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View>
+            <Text style={[styles.username, { color: colors.text }]}>{user}</Text>
+            <Text style={[styles.timestamp, { color: colors.subtext }]}>
+              {formatTimestamp(timestamp)}
+            </Text>
+          </View>
         </View>
+        {getSentimentBadge()}
       </View>
       
-      <Text style={[styles.content, { color: `${colors.text}90` }]}>
-        {content}
-      </Text>
+      <View style={styles.contentContainer}>
+        <MessageCircle size={16} color={colors.subtext} style={styles.contentIcon} />
+        <Text style={[styles.content, { color: colors.text }]}>
+          {content}
+        </Text>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
     marginHorizontal: 16,
-    borderWidth: 1,
+    marginBottom: 16,
+    borderRadius: 24,
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.05,
-    shadowRadius: 3.84,
-    elevation: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  username: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  timestamp: {
-    fontSize: 12,
-  },
-  sentimentRow: {
-    marginBottom: 12,
-  },
-  sentimentContainer: {
+  userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  username: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  timestamp: {
+    fontSize: 13,
+  },
+  sentimentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    gap: 8,
+    gap: 6,
   },
-  sentiment: {
+  sentimentDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  sentimentText: {
+    fontSize: 13,
     fontWeight: '600',
   },
+  contentContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  contentIcon: {
+    marginRight: 12,
+    marginTop: 3,
+  },
   content: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
+    flex: 1,
   },
 });
 

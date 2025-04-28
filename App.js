@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Alert, TouchableOpacity } from 'react-native';
+import { Alert, TouchableOpacity, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { Ionicons } from '@expo/vector-icons';
 import UserListScreen from './screens/UserListScreen';
@@ -21,11 +21,17 @@ function ThemeToggleButton() {
   const { isDarkMode, toggleTheme } = useTheme();
   
   return (
-    <TouchableOpacity onPress={toggleTheme} style={{ marginRight: 10 }}>
+    <TouchableOpacity 
+      onPress={toggleTheme} 
+      style={{ 
+        marginRight: 15,
+        padding: 8,
+      }}
+    >
       <Ionicons 
         name={isDarkMode ? 'sunny' : 'moon'} 
-        size={24} 
-        color={isDarkMode ? 'white' : 'black'} 
+        size={22} 
+        color={isDarkMode ? '#FFF' : '#0B1437'} 
       />
     </TouchableOpacity>
   );
@@ -104,21 +110,32 @@ function MainApp() {
   return (
     <SafeAreaProvider>
       <NavigationContainer ref={navigationRef}>
-        <Stack.Navigator>
+        <Stack.Navigator
+          screenOptions={{
+            headerStyle: {
+              elevation: 0,
+              shadowOpacity: 0,
+            },
+            headerTintColor: colors.text,
+            headerBackTitleVisible: false,
+            headerShadowVisible: false,
+            animation: 'slide_from_right',
+          }}
+        >
           <Stack.Screen
             name="UserList"
             component={UserListScreen}
             options={{
-              title: 'Sentiment Monitoring',
+              title: 'Sentiment Analysis',
               headerStyle: {
-                backgroundColor: colors.card,
+                backgroundColor: colors.background,
               },
-              headerShadowVisible: false,
               headerTitleStyle: {
-                fontWeight: 'bold',
+                fontWeight: '700',
+                fontSize: 20,
                 color: colors.text,
               },
-              headerTitleAlign: 'center',
+              headerTitleAlign: 'left',
               // Add the theme toggle button to the header
               headerRight: () => <ThemeToggleButton />,
             }}
@@ -129,11 +146,11 @@ function MainApp() {
             options={({ route }) => ({
               title: route.params.userName,
               headerStyle: {
-                backgroundColor: colors.card,
+                backgroundColor: colors.background,
               },
-              headerShadowVisible: false,
               headerTitleStyle: {
-                fontWeight: 'bold',
+                fontWeight: '600',
+                fontSize: 18,
                 color: colors.text,
               },
               // Add the theme toggle button to the detail screen header too
@@ -142,7 +159,10 @@ function MainApp() {
           />
         </Stack.Navigator>
       </NavigationContainer>
-      <StatusBar style={isDarkMode ? "light" : "dark"} />
+      <StatusBar 
+        style={isDarkMode ? "light" : "dark"} 
+        backgroundColor={colors.background}
+      />
     </SafeAreaProvider>
   );
 }

@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { ThumbsUp, ThumbsDown, Minus } from 'lucide-react-native';
+import { ThumbsUp, ThumbsDown, Minus, ChevronDown, ChevronUp } from 'lucide-react-native';
 
 const SentimentAnalytics = ({ posts }) => {
-  const { colors } = useTheme();
+  const { colors, isDarkMode } = useTheme();
   const [timeFilter, setTimeFilter] = useState('today');
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -20,11 +20,10 @@ const SentimentAnalytics = ({ posts }) => {
       const postDate = new Date(post.timestamp);
 
       if (timeFilter === 'today') {
-        const today = new Date();
         return (
-          postDate.getDate() === today.getDate() &&
-          postDate.getMonth() === today.getMonth() &&
-          postDate.getFullYear() === today.getFullYear()
+          postDate.getDate() === now.getDate() &&
+          postDate.getMonth() === now.getMonth() &&
+          postDate.getFullYear() === now.getFullYear()
         );
       } else if (timeFilter === 'week') {
         const weekAgo = new Date();
@@ -67,64 +66,80 @@ const SentimentAnalytics = ({ posts }) => {
   return (
     <View>
       <TouchableOpacity
-        style={{
-          backgroundColor: '#3b82f6',
-          padding: 10,
-          marginHorizontal: 16,
-          marginBottom: 10,
-          borderRadius: 8,
-          alignItems: 'center',
-        }}
+        style={[styles.toggleButton, { backgroundColor: colors.primary }]}
         onPress={() => setShowAnalytics(prev => !prev)}
       >
-        <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+        <Text style={styles.toggleButtonText}>
           {showAnalytics ? 'Hide Sentiment Analytics' : 'Show Sentiment Analytics'}
         </Text>
+        {showAnalytics ? (
+          <ChevronUp size={20} color="#fff" />
+        ) : (
+          <ChevronDown size={20} color="#fff" />
+        )}
       </TouchableOpacity>
 
       {showAnalytics && (
-        <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.title, { color: colors.text }]}>Sentiment Analytics</Text>
+        <View style={[styles.container, { backgroundColor: colors.card }]}>
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: colors.text }]}>Sentiment Analytics</Text>
+            <Text style={[styles.subtitle, { color: `${colors.text}80` }]}>
+              {analytics.total > 0 
+                ? `Based on ${analytics.total} posts`
+                : 'No posts found for this time period'
+              }
+            </Text>
+          </View>
 
           <View style={styles.timeFilterContainer}>
-            <TouchableOpacity 
-              style={[styles.filterButton, timeFilter === 'today' && styles.activeFilterButton]} 
-              onPress={() => setTimeFilter('today')}>
-              <Text style={[styles.filterText, timeFilter === 'today' && { color: '#fff' }]}>Today</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.filterButton, timeFilter === 'week' && styles.activeFilterButton]} 
-              onPress={() => setTimeFilter('week')}>
-              <Text style={[styles.filterText, timeFilter === 'week' && { color: '#fff' }]}>Week</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.filterButton, timeFilter === 'month' && styles.activeFilterButton]} 
-              onPress={() => setTimeFilter('month')}>
-              <Text style={[styles.filterText, timeFilter === 'month' && { color: '#fff' }]}>Month</Text>
-            </TouchableOpacity>
+            {['today', 'week', 'month'].map((filter) => (
+              <TouchableOpacity 
+                key={filter}
+                style={[
+                  styles.filterButton, 
+                  timeFilter === filter && { 
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 4,
+                  }
+                ]} 
+                onPress={() => setTimeFilter(filter)}
+              >
+                <Text style={[
+                  styles.filterText, 
+                  { color: timeFilter === filter ? '#fff' : colors.text }
+                ]}>
+                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
           {timeFilter === 'month' && (
-            <View style={{ marginTop: 10 }}>
-              <Text style={{ color: colors.text, marginBottom: 4, textAlign: 'center' }}>Select Month:</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
-                {[
-                  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-                ].map((monthName, index) => (
+            <View style={styles.monthSelector}>
+              <Text style={[styles.monthSelectorTitle, { color: colors.text }]}>
+                Select Month:
+              </Text>
+              <View style={styles.monthGrid}>
+                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((monthName, index) => (
                   <TouchableOpacity
                     key={index}
-                    style={{
-                      padding: 6,
-                      margin: 4,
-                      borderRadius: 6,
-                      backgroundColor: selectedMonth === index ? '#3b82f6' : colors.card,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                    }}
+                    style={[
+                      styles.monthButton,
+                      { 
+                        backgroundColor: selectedMonth === index ? colors.primary : colors.card,
+                        borderColor: selectedMonth === index ? colors.primary : colors.border,
+                      }
+                    ]}
                     onPress={() => setSelectedMonth(index)}
                   >
-                    <Text style={{ color: selectedMonth === index ? '#fff' : colors.text, fontSize: 12 }}>
+                    <Text style={[
+                      styles.monthButtonText, 
+                      { color: selectedMonth === index ? '#fff' : colors.text }
+                    ]}>
                       {monthName}
                     </Text>
                   </TouchableOpacity>
@@ -134,64 +149,47 @@ const SentimentAnalytics = ({ posts }) => {
           )}
 
           {analytics.total > 0 ? (
-            <Text style={[styles.subtitle, { color: `${colors.text}80` }]}>
-              Based on {analytics.total} posts
-            </Text>
-          ) : (
-            <Text style={[styles.subtitle, { color: `${colors.text}80` }]}>
-              No posts found for this time period
-            </Text>
-          )}
-
-          {analytics.total > 0 ? (
             <View style={styles.metricsContainer}>
-              <View style={styles.metricRow}>
-                <View style={styles.labelContainer}>
-                  <ThumbsUp size={16} color={colors.positive} />
-                  <Text style={[styles.label, { color: colors.text }]}>Positive</Text>
+              {[
+                { type: 'positive', icon: ThumbsUp, value: analytics.positive },
+                { type: 'negative', icon: ThumbsDown, value: analytics.negative },
+                { type: 'neutral', icon: Minus, value: analytics.neutral }
+              ].map(({ type, icon: Icon, value }) => (
+                <View key={type} style={styles.metricCard}>
+                  <View style={[styles.metricIconContainer, { backgroundColor: `${colors[type]}20` }]}>
+                    <Icon size={24} color={colors[type]} />
+                  </View>
+                  <Text style={[styles.metricValue, { color: colors.text }]}>
+                    {value}%
+                  </Text>
+                  <Text style={[styles.metricLabel, { color: `${colors.text}80` }]}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </Text>
+                  <View style={[styles.progressBarContainer, { backgroundColor: `${colors[type]}10` }]}>
+                    <View 
+                      style={[
+                        styles.progressBar, 
+                        { width: `${value}%`, backgroundColor: colors[type] }
+                      ]} 
+                    />
+                  </View>
                 </View>
-                <View style={styles.progressContainer}>
-                  <View style={[styles.progressBar, { width: `${analytics.positive}%`, backgroundColor: colors.positive }]} />
-                </View>
-                <Text style={[styles.percentage, { color: colors.positive }]}>{analytics.positive}%</Text>
-              </View>
-
-              <View style={styles.metricRow}>
-                <View style={styles.labelContainer}>
-                  <ThumbsDown size={16} color={colors.negative} />
-                  <Text style={[styles.label, { color: colors.text }]}>Negative</Text>
-                </View>
-                <View style={styles.progressContainer}>
-                  <View style={[styles.progressBar, { width: `${analytics.negative}%`, backgroundColor: colors.negative }]} />
-                </View>
-                <Text style={[styles.percentage, { color: colors.negative }]}>{analytics.negative}%</Text>
-              </View>
-
-              <View style={styles.metricRow}>
-                <View style={styles.labelContainer}>
-                  <Minus size={16} color={colors.neutral} />
-                  <Text style={[styles.label, { color: colors.text }]}>Neutral</Text>
-                </View>
-                <View style={styles.progressContainer}>
-                  <View style={[styles.progressBar, { width: `${analytics.neutral}%`, backgroundColor: colors.neutral }]} />
-                </View>
-                <Text style={[styles.percentage, { color: colors.neutral }]}>{analytics.neutral}%</Text>
-              </View>
+              ))}
             </View>
           ) : (
             <View style={styles.emptyStateContainer}>
               <Text style={[styles.emptyStateText, { color: colors.text }]}>
-                No sentiment data to display for this time period.
+                No sentiment data to display
               </Text>
-              <Text style={[styles.emptyStateSubText, { color: `${colors.text}80` }]}>
+              <Text style={[styles.emptyStateSubText, { color: `${colors.text}60` }]}>
                 Try selecting a different time range.
               </Text>
             </View>
           )}
 
           {analytics.total > 0 && (
-            <View style={[styles.summaryContainer, { borderTopColor: colors.border }]}>
-              <Text style={[styles.summaryText, { color: colors.text }]}>
+            <View style={[styles.summaryContainer, { backgroundColor: `${colors.primary}10` }]}>
+              <Text style={[styles.summaryText, { color: colors.primary }]}>
                 {analytics.positive > analytics.negative && analytics.positive > analytics.neutral
                   ? 'Overall sentiment is positive'
                   : analytics.negative > analytics.positive && analytics.negative > analytics.neutral
@@ -207,108 +205,151 @@ const SentimentAnalytics = ({ posts }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  toggleButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 14,
     marginHorizontal: 16,
     marginBottom: 16,
     borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
+    gap: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3.84,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  toggleButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  container: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  header: {
+    marginBottom: 20,
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  timeFilterContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  filterButton: {
-    flex: 1,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeFilterButton: {
-    backgroundColor: '#3b82f6',
-  },
-  filterText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    marginBottom: 16,
+  },
+  timeFilterContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    gap: 8,
+  },
+  filterButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: '#f5f5f5',
+  },
+  filterText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  monthSelector: {
+    marginBottom: 20,
+  },
+  monthSelectorTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  monthGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  monthButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  monthButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   metricsContainer: {
-    marginBottom: 16,
-  },
-  metricRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  metricCard: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#f8f9fa',
+  },
+  metricIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
   },
-  labelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: 90,
-    gap: 6,
+  metricValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 4,
   },
-  label: {
+  metricLabel: {
     fontSize: 14,
+    marginBottom: 8,
   },
-  progressContainer: {
-    flex: 1,
-    height: 8,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 4,
+  progressBarContainer: {
+    width: '100%',
+    height: 6,
+    borderRadius: 3,
     overflow: 'hidden',
-    marginHorizontal: 12,
   },
   progressBar: {
     height: '100%',
-    borderRadius: 4,
-  },
-  percentage: {
-    width: 40,
-    fontSize: 14,
-    fontWeight: 'bold',
-    textAlign: 'right',
+    borderRadius: 3,
   },
   summaryContainer: {
-    paddingTop: 12,
-    borderTopWidth: 1,
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 12,
   },
   summaryText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '600',
     textAlign: 'center',
   },
   emptyStateContainer: {
-    padding: 20,
+    padding: 24,
     alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 100,
   },
   emptyStateText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
     marginBottom: 8,
-    textAlign: 'center',
   },
   emptyStateSubText: {
     fontSize: 14,
-    textAlign: 'center',
   },
 });
 
