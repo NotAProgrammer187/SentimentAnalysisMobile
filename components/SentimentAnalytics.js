@@ -83,7 +83,7 @@ const SentimentAnalytics = ({ posts }) => {
         <View style={[styles.container, { backgroundColor: colors.card }]}>
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.text }]}>Sentiment Analytics</Text>
-            <Text style={[styles.subtitle, { color: `${colors.text}80` }]}>
+            <Text style={[styles.subtitle, { color: colors.subtext }]}>
               {analytics.total > 0 
                 ? `Based on ${analytics.total} posts`
                 : 'No posts found for this time period'
@@ -97,6 +97,7 @@ const SentimentAnalytics = ({ posts }) => {
                 key={filter}
                 style={[
                   styles.filterButton, 
+                  { backgroundColor: isDarkMode ? colors.background : '#f5f5f5' },
                   timeFilter === filter && { 
                     backgroundColor: colors.primary,
                     shadowColor: colors.primary,
@@ -155,14 +156,20 @@ const SentimentAnalytics = ({ posts }) => {
                 { type: 'negative', icon: ThumbsDown, value: analytics.negative },
                 { type: 'neutral', icon: Minus, value: analytics.neutral }
               ].map(({ type, icon: Icon, value }) => (
-                <View key={type} style={styles.metricCard}>
+                <View 
+                  key={type} 
+                  style={[
+                    styles.metricCard, 
+                    { backgroundColor: isDarkMode ? colors.background : '#f8f9fa' }
+                  ]}
+                >
                   <View style={[styles.metricIconContainer, { backgroundColor: `${colors[type]}20` }]}>
                     <Icon size={24} color={colors[type]} />
                   </View>
                   <Text style={[styles.metricValue, { color: colors.text }]}>
                     {value}%
                   </Text>
-                  <Text style={[styles.metricLabel, { color: `${colors.text}80` }]}>
+                  <Text style={[styles.metricLabel, { color: colors.subtext }]}>
                     {type.charAt(0).toUpperCase() + type.slice(1)}
                   </Text>
                   <View style={[styles.progressBarContainer, { backgroundColor: `${colors[type]}10` }]}>
@@ -181,7 +188,7 @@ const SentimentAnalytics = ({ posts }) => {
               <Text style={[styles.emptyStateText, { color: colors.text }]}>
                 No sentiment data to display
               </Text>
-              <Text style={[styles.emptyStateSubText, { color: `${colors.text}60` }]}>
+              <Text style={[styles.emptyStateSubText, { color: colors.subtext }]}>
                 Try selecting a different time range.
               </Text>
             </View>
@@ -259,7 +266,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 10,
-    backgroundColor: '#f5f5f5',
   },
   filterText: {
     fontSize: 14,
@@ -300,7 +306,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#f8f9fa',
   },
   metricIconContainer: {
     width: 48,
