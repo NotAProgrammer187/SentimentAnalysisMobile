@@ -10,13 +10,15 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
+  Animated,
 } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import { useTheme } from "../context/ThemeContext"
-import { User, ChevronRight, MessageCircle, AlertTriangle } from "lucide-react-native"
+import { User, ChevronRight, MessageCircle, AlertTriangle, EyeOff, Eye, RefreshCw } from "lucide-react-native"
 import { supabase } from "../utils/supabaseClient"
 import SentimentAnalytics from "../components/SentimentAnalytics"
 import * as FileSystem from "expo-file-system"
+import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler"
 
 const UserListScreen = () => {
   const { colors } = useTheme()
@@ -27,6 +29,9 @@ const UserListScreen = () => {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
   const [profileImages, setProfileImages] = useState({})
+  const [hiddenUsers, setHiddenUsers] = useState([])
+  const [showHidden, setShowHidden] = useState(false)
+  const swipeableRefs = {}
 
   // Directory for storing user images
   const userImagesDir = FileSystem.documentDirectory + "user_images/"
@@ -151,53 +156,160 @@ const UserListScreen = () => {
     }
   }
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={[styles.userCard, { backgroundColor: colors.card }]}
-      onPress={() => navigateToUserDetail(item.name)}
-    >
-      <View style={styles.userInfo}>
-        <View style={[styles.avatarContainer, { backgroundColor: colors.background }]}>
-          {profileImages[item.name] ? (
-            <Image source={{ uri: profileImages[item.name] }} style={styles.avatarImage} />
-          ) : (
-            <Text style={[styles.avatarText, { color: colors.subtext }]}>{item.name.charAt(0).toUpperCase()}</Text>
-          )}
-        </View>
-        <View style={styles.textContainer}>
-          <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
-          <View style={styles.statsContainer}>
-            <MessageCircle size={14} color={colors.subtext} />
-            <Text style={[styles.postCount, { color: colors.subtext }]}>
-              {item.postCount} {item.postCount === 1 ? "post" : "posts"}
-            </Text>
-            {item.negativeCount > 0 && (
-              <View style={[styles.warningBadge, { backgroundColor: colors.negative }]}>
-                <AlertTriangle size={12} color="#FFF" />
-                <Text style={styles.warningBadgeText}>
-                  {item.negativeCount} negative {item.negativeCount === 1 ? "post" : "posts"} in 24h
+  const hideUser = (userName) => {
+    setHiddenUsers([...hiddenUsers, userName])
+  }
+
+  const restoreUser = (userName) => {
+    setHiddenUsers(hiddenUsers.filter(name => name !== userName))
+    // Close any open swipeable
+    if (swipeableRefs[userName]) {
+      swipeableRefs[userName].close()
+    }
+  }
+
+  const toggleHiddenUsers = () => {
+    setShowHidden(!showHidden)
+  }
+
+  const renderRightActions = (userName, isHidden) => {
+    if (isHidden) {
+      return (
+        <TouchableOpacity
+          style={[styles.restoreAction, { backgroundColor: colors.positive }]}
+          onPress={() => restoreUser(userName)}
+        >
+          <RefreshCw size={20} color="#FFF" />
+          <Text style={styles.actionText}>Restore</Text>
+        </TouchableOpacity>
+      )
+    } else {
+      return (
+        <TouchableOpacity
+          style={[styles.hideAction, { backgroundColor: colors.negative }]}
+          onPress={() => hideUser(userName)}
+        >
+          <EyeOff size={20} color="#FFF" />
+          <Text style={styles.actionText}>Hide</Text>
+        </TouchableOpacity>
+      )
+    }
+  }
+
+  const renderItem = ({ item }) => {
+    const isHidden = hiddenUsers.includes(item.name)
+    
+    // Skip rendering if user is hidden and we're not showing hidden users
+    if (isHidden && !showHidden) {
+      return null
+    }
+
+    return (
+      <Swipeable
+        ref={ref => swipeableRefs[item.name] = ref}
+        renderRightActions={() => renderRightActions(item.name, isHidden)}
+        friction={2}
+        overshootRight={false}
+      >
+        <TouchableOpacity
+          style={[
+            styles.userCard, 
+            { backgroundColor: colors.card },
+            isHidden && showHidden && styles.hiddenUserCard
+          ]}
+          onPress={() => navigateToUserDetail(item.name)}
+        >
+          <View style={styles.userInfo}>
+            <View style={[styles.avatarContainer, { backgroundColor: colors.background }]}>
+              {profileImages[item.name] ? (
+                <Image source={{ uri: profileImages[item.name] }} style={styles.avatarImage} />
+              ) : (
+                <Text style={[styles.avatarText, { color: colors.subtext }]}>{item.name.charAt(0).toUpperCase()}</Text>
+              )}
+            </View>
+            <View style={styles.textContainer}>
+              <View style={styles.nameContainer}>
+                <Text style={[styles.userName, { color: colors.text }]}>
+                  {item.name}
                 </Text>
+                {isHidden && showHidden && (
+                  <View style={styles.hiddenBadgeContainer}>
+                    <Text style={[styles.hiddenBadge, { color: colors.negative }]}>(Hidden)</Text>
+                    <TouchableOpacity 
+                      style={[styles.restoreButton, { backgroundColor: colors.positive }]}
+                      onPress={() => restoreUser(item.name)}
+                    >
+                      <RefreshCw size={12} color="#FFF" />
+                      <Text style={styles.restoreButtonText}>Restore</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
-            )}
+              <View style={styles.statsContainer}>
+                <MessageCircle size={14} color={colors.subtext} />
+                <Text style={[styles.postCount, { color: colors.subtext }]}>
+                  {item.postCount} {item.postCount === 1 ? "post" : "posts"}
+                </Text>
+                {item.negativeCount > 0 && (
+                  <View style={[styles.warningBadge, { backgroundColor: colors.negative }]}>
+                    <AlertTriangle size={12} color="#FFF" />
+                    <Text style={styles.warningBadgeText}>
+                      {item.negativeCount} negative {item.negativeCount === 1 ? "post" : "posts"} in 24h
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
-      <View style={styles.rightSection}>
-        {item.recentSentiment && (
-          <View style={[styles.sentimentIndicator, { backgroundColor: getSentimentColor(item.recentSentiment) }]} />
-        )}
-        <ChevronRight size={20} color={colors.subtext} />
-      </View>
-    </TouchableOpacity>
-  )
+          <View style={styles.rightSection}>
+            {item.recentSentiment && (
+              <View style={[styles.sentimentIndicator, { backgroundColor: getSentimentColor(item.recentSentiment) }]} />
+            )}
+            <ChevronRight size={20} color={colors.subtext} />
+          </View>
+        </TouchableOpacity>
+      </Swipeable>
+    )
+  }
 
   const renderHeader = () => {
     return (
       <View style={styles.headerContainer}>
         <SentimentAnalytics posts={allPosts} />
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>User</Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.subtext }]}>{usernames.length} active user</Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Users</Text>
+            {hiddenUsers.length > 0 && (
+              <TouchableOpacity 
+                style={[styles.toggleHiddenButton, { backgroundColor: showHidden ? colors.primary : colors.card }]} 
+                onPress={toggleHiddenUsers}
+              >
+                {showHidden ? (
+                  <>
+                    <EyeOff size={16} color="#FFF" />
+                    <Text style={styles.toggleHiddenButtonText}>Hide ({hiddenUsers.length})</Text>
+                  </>
+                ) : (
+                  <>
+                    <Eye size={16} color={colors.primary} />
+                    <Text style={[styles.toggleHiddenButtonText, { color: colors.primary }]}>Show Hidden ({hiddenUsers.length})</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+          <Text style={[styles.sectionSubtitle, { color: colors.subtext }]}>
+            {usernames.length - (showHidden ? 0 : hiddenUsers.length)} active user{usernames.length - (showHidden ? 0 : hiddenUsers.length) !== 1 ? 's' : ''}
+          </Text>
+          {showHidden && hiddenUsers.length > 0 && (
+            <TouchableOpacity 
+              style={[styles.restoreAllButton, { borderColor: colors.positive }]}
+              onPress={() => setHiddenUsers([])}
+            >
+              <RefreshCw size={14} color={colors.positive} />
+              <Text style={[styles.restoreAllButtonText, { color: colors.positive }]}>Restore All Users</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     )
@@ -221,25 +333,27 @@ const UserListScreen = () => {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <FlatList
-        data={usernames}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.name}
-        contentContainerStyle={styles.listContainer}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <View style={[styles.emptyIcon, { backgroundColor: colors.card }]}>
-              <User size={32} color={colors.subtext} />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FlatList
+          data={usernames}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.name}
+          contentContainerStyle={styles.listContainer}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <View style={[styles.emptyIcon, { backgroundColor: colors.card }]}>
+                <User size={32} color={colors.subtext} />
+              </View>
+              <Text style={[styles.emptyText, { color: colors.text }]}>No customers found</Text>
+              <Text style={[styles.emptySubtext, { color: colors.subtext }]}>Pull down to refresh</Text>
             </View>
-            <Text style={[styles.emptyText, { color: colors.text }]}>No customers found</Text>
-            <Text style={[styles.emptySubtext, { color: colors.subtext }]}>Pull down to refresh</Text>
-          </View>
-        }
-      />
-    </View>
+          }
+        />
+      </View>
+    </GestureHandlerRootView>
   )
 }
 
@@ -264,13 +378,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 8,
   },
+  sectionTitleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
   sectionTitle: {
     fontSize: 22,
     fontWeight: "700",
-    marginBottom: 4,
   },
   sectionSubtitle: {
     fontSize: 15,
+    marginBottom: 8,
   },
   userCard: {
     flexDirection: "row",
@@ -287,6 +407,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 5,
+  },
+  hiddenUserCard: {
+    opacity: 0.7,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "#ccc",
   },
   userInfo: {
     flexDirection: "row",
@@ -314,10 +440,38 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
   },
+  nameContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginBottom: 4,
+  },
   userName: {
     fontSize: 17,
     fontWeight: "600",
-    marginBottom: 4,
+  },
+  hiddenBadgeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 8,
+    gap: 8,
+  },
+  hiddenBadge: {
+    fontStyle: "italic",
+    fontSize: 14,
+  },
+  restoreButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  restoreButtonText: {
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "600",
   },
   statsContainer: {
     flexDirection: "row",
@@ -379,6 +533,54 @@ const styles = StyleSheet.create({
   },
   emptySubtext: {
     fontSize: 15,
+  },
+  hideAction: {
+    justifyContent: "center",
+    alignItems: "center",
+    width: 80,
+    height: "100%",
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  restoreAction: {
+    justifyContent: "center",
+    alignItems: "center",
+    width: 80,
+    height: "100%",
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  actionText: {
+    color: "#FFF",
+    fontWeight: "600",
+    marginTop: 4,
+  },
+  toggleHiddenButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+  },
+  toggleHiddenButtonText: {
+    color: "#FFF",
+    fontWeight: "600",
+    fontSize: 12,
+  },
+  restoreAllButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 8,
+    gap: 8,
+  },
+  restoreAllButtonText: {
+    fontWeight: "600",
+    fontSize: 14,
   },
 })
 
