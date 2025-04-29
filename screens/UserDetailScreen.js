@@ -68,18 +68,24 @@ const UserDetailScreen = () => {
   // Ensure the directories exist
   const setupDirectories = async () => {
     try {
+      // Log the directory paths for debugging
+      console.log("Setting up directories:", { userImagesDir, exportsDir })
+
       const imageDirInfo = await FileSystem.getInfoAsync(userImagesDir)
       if (!imageDirInfo.exists) {
+        console.log("Creating user images directory...")
         await FileSystem.makeDirectoryAsync(userImagesDir, { intermediates: true })
       }
 
       const exportsDirInfo = await FileSystem.getInfoAsync(exportsDir)
       if (!exportsDirInfo.exists) {
+        console.log("Creating exports directory...")
         await FileSystem.makeDirectoryAsync(exportsDir, { intermediates: true })
       }
       return true
     } catch (error) {
       console.error("Error setting up directories:", error)
+      Alert.alert("Storage Error", "Failed to set up storage directories. Please check app permissions.")
       return false
     }
   }
@@ -91,11 +97,15 @@ const UserDetailScreen = () => {
       const imagePath = userImagesDir + `${userName}.jpg`
       const imageInfo = await FileSystem.getInfoAsync(imagePath)
 
+      console.log("Loading profile image:", { imagePath, exists: imageInfo.exists })
+
       if (imageInfo.exists) {
-        setProfileImage(`file://${imagePath}`)
+        // Add timestamp to prevent caching issues
+        setProfileImage(`file://${imagePath}?t=${new Date().getTime()}`)
       }
     } catch (error) {
       console.error("Error loading profile image:", error)
+      setError("Failed to load profile image. Please try again later.")
     }
   }
 
@@ -205,6 +215,7 @@ const UserDetailScreen = () => {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const selectedImage = result.assets[0]
+        console.log("Image picked from gallery:", selectedImage.uri)
         await saveImage(selectedImage.uri)
       }
     } catch (error) {
@@ -233,6 +244,7 @@ const UserDetailScreen = () => {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const selectedImage = result.assets[0]
+        console.log("Photo taken with camera:", selectedImage.uri)
         await saveImage(selectedImage.uri)
       }
     } catch (error) {
@@ -244,20 +256,54 @@ const UserDetailScreen = () => {
   // Function to save the image to local storage
   const saveImage = async (imageUri) => {
     try {
-      await setupDirectories()
+      const dirsSetup = await setupDirectories()
+      if (!dirsSetup) {
+        throw new Error("Failed to set up directories")
+      }
+
       const fileName = `${userName}.jpg`
       const newPath = userImagesDir + fileName
 
+      console.log("Saving image:", {
+        from: imageUri,
+        to: newPath,
+      })
+
+      // Check if the source URI is valid
+      const sourceInfo = await FileSystem.getInfoAsync(imageUri)
+      if (!sourceInfo.exists) {
+        throw new Error("Source image does not exist")
+      }
+
+      // Delete existing file if it exists to avoid conflicts
+      const destInfo = await FileSystem.getInfoAsync(newPath)
+      if (destInfo.exists) {
+        console.log("Deleting existing image file")
+        await FileSystem.deleteAsync(newPath, { idempotent: true })
+      }
+
+      // Copy the file
       await FileSystem.copyAsync({
         from: imageUri,
         to: newPath,
       })
 
-      setProfileImage(`file://${newPath}`)
+      // Verify the file was copied successfully
+      const newFileInfo = await FileSystem.getInfoAsync(newPath)
+      if (!newFileInfo.exists) {
+        throw new Error("Failed to save image - file not found after copy")
+      }
+
+      console.log("Image saved successfully:", newFileInfo)
+
+      // Update the state with the new image path
+      // Add timestamp to prevent caching issues
+      setProfileImage(`file://${newPath}?t=${new Date().getTime()}`)
+
       Alert.alert("Success", "Profile image updated successfully!")
     } catch (error) {
       console.error("Error saving image:", error)
-      Alert.alert("Error", "Failed to save image. Please try again.")
+      Alert.alert("Error", `Failed to save image: ${error.message}. Please try again.`)
     }
   }
 
@@ -414,6 +460,7 @@ const UserDetailScreen = () => {
       if (viewShotRef.current) {
         try {
           const uri = await viewShotRef.current.capture()
+          console.log("ViewShot captured:", uri)
 
           // Show preview instead of saving directly
           setPreviewImageUri(uri)

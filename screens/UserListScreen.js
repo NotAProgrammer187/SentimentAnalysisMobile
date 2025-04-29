@@ -1,7 +1,16 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Image } from "react-native"
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+  Image,
+} from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import { useTheme } from "../context/ThemeContext"
 import { User, ChevronRight, MessageCircle, AlertTriangle } from "lucide-react-native"
@@ -20,7 +29,7 @@ const UserListScreen = () => {
   const [profileImages, setProfileImages] = useState({})
 
   // Directory for storing user images
-  const userImagesDir = FileSystem.documentDirectory + 'user_images/'
+  const userImagesDir = FileSystem.documentDirectory + "user_images/"
 
   // Check if the directory exists and create it if it doesn't
   const setupImageDirectory = async () => {
@@ -34,20 +43,21 @@ const UserListScreen = () => {
   const loadProfileImages = async (users) => {
     try {
       await setupImageDirectory()
-      
+
       const imageMap = {}
-      
+
       // Check for each user if they have a profile image
       for (const user of users) {
         const username = user.name
         const imagePath = userImagesDir + `${username}.jpg`
         const imageInfo = await FileSystem.getInfoAsync(imagePath)
-        
+
         if (imageInfo.exists) {
-          imageMap[username] = `file://${imagePath}`
+          // Add timestamp to prevent caching issues
+          imageMap[username] = `file://${imagePath}?t=${new Date().getTime()}`
         }
       }
-      
+
       setProfileImages(imageMap)
     } catch (error) {
       console.error("Error loading profile images:", error)
@@ -89,12 +99,12 @@ const UserListScreen = () => {
         if (isRecent) {
           if (sentiment === "positive") {
             acc[username].positiveCount += 1
-            if (!acc[username].recentSentiment) acc[username].recentSentiment = 'positive'
+            if (!acc[username].recentSentiment) acc[username].recentSentiment = "positive"
           } else if (sentiment === "negative") {
             acc[username].negativeCount += 1
-            if (!acc[username].recentSentiment) acc[username].recentSentiment = 'negative'
+            if (!acc[username].recentSentiment) acc[username].recentSentiment = "negative"
           } else {
-            if (!acc[username].recentSentiment) acc[username].recentSentiment = 'neutral'
+            if (!acc[username].recentSentiment) acc[username].recentSentiment = "neutral"
           }
         }
 
@@ -103,10 +113,10 @@ const UserListScreen = () => {
 
       const uniqueUsernames = Object.values(userMap)
       setUsernames(uniqueUsernames)
-      
+
       // Load profile images for all users
       await loadProfileImages(uniqueUsernames)
-      
+
       setError(null)
     } catch (error) {
       console.error("Error fetching data:", error)
@@ -132,14 +142,14 @@ const UserListScreen = () => {
 
   const getSentimentColor = (sentiment) => {
     switch (sentiment) {
-      case 'positive':
-        return colors.positive;
-      case 'negative':
-        return colors.negative;
+      case "positive":
+        return colors.positive
+      case "negative":
+        return colors.negative
       default:
-        return colors.neutral;
+        return colors.neutral
     }
-  };
+  }
 
   const renderItem = ({ item }) => (
     <TouchableOpacity
@@ -149,28 +159,23 @@ const UserListScreen = () => {
       <View style={styles.userInfo}>
         <View style={[styles.avatarContainer, { backgroundColor: colors.background }]}>
           {profileImages[item.name] ? (
-            <Image 
-              source={{ uri: profileImages[item.name] }} 
-              style={styles.avatarImage} 
-            />
+            <Image source={{ uri: profileImages[item.name] }} style={styles.avatarImage} />
           ) : (
-            <Text style={[styles.avatarText, { color: colors.subtext }]}>
-              {item.name.charAt(0).toUpperCase()}
-            </Text>
+            <Text style={[styles.avatarText, { color: colors.subtext }]}>{item.name.charAt(0).toUpperCase()}</Text>
           )}
         </View>
         <View style={styles.textContainer}>
           <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
           <View style={styles.statsContainer}>
             <MessageCircle size={14} color={colors.subtext} />
-            <Text style={[styles.postCount, { color: colors.subtext }]}> 
+            <Text style={[styles.postCount, { color: colors.subtext }]}>
               {item.postCount} {item.postCount === 1 ? "post" : "posts"}
             </Text>
             {item.negativeCount > 0 && (
               <View style={[styles.warningBadge, { backgroundColor: colors.negative }]}>
                 <AlertTriangle size={12} color="#FFF" />
                 <Text style={styles.warningBadgeText}>
-                  {item.negativeCount} negative {item.negativeCount === 1 ? 'post' : 'posts'} in 24h
+                  {item.negativeCount} negative {item.negativeCount === 1 ? "post" : "posts"} in 24h
                 </Text>
               </View>
             )}
@@ -192,9 +197,7 @@ const UserListScreen = () => {
         <SentimentAnalytics posts={allPosts} />
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>User</Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.subtext }]}>
-            {usernames.length} active user
-          </Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.subtext }]}>{usernames.length} active user</Text>
         </View>
       </View>
     )
@@ -224,13 +227,7 @@ const UserListScreen = () => {
         renderItem={renderItem}
         keyExtractor={(item) => item.name}
         contentContainerStyle={styles.listContainer}
-        refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh} 
-            tintColor={colors.primary}
-          />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -238,9 +235,7 @@ const UserListScreen = () => {
               <User size={32} color={colors.subtext} />
             </View>
             <Text style={[styles.emptyText, { color: colors.text }]}>No customers found</Text>
-            <Text style={[styles.emptySubtext, { color: colors.subtext }]}>
-              Pull down to refresh
-            </Text>
+            <Text style={[styles.emptySubtext, { color: colors.subtext }]}>Pull down to refresh</Text>
           </View>
         }
       />
@@ -271,7 +266,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 4,
   },
   sectionSubtitle: {
@@ -314,7 +309,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   textContainer: {
     flex: 1,
@@ -325,9 +320,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
     gap: 8,
   },
   postCount: {
@@ -335,21 +330,21 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   warningBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
     gap: 4,
   },
   warningBadgeText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   rightSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   sentimentIndicator: {
@@ -373,13 +368,13 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 8,
   },
   emptySubtext: {
