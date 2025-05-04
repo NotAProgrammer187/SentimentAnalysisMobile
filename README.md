@@ -171,7 +171,10 @@ npm install -g eas-cli
 # Login to your EAS account
 eas login
 
+#build the app
+eas build -p android --profile preview
+
 # Set the secrets
-eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_URL --value "https://your-actual-project-id.supabase.co"
-eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "your-actual-anon-key-here"
+eas env:create --scope project --name EXPO_PUBLIC_SUPABASE_URL --value  "https://your-actual-project-id.supabase.co"
+eas env:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value  "your-actual-anon-key-here"
 ```
